@@ -12,6 +12,7 @@ import torch.nn as nn
 
 from dataset import read_datasets, HNDataProvider
 from net import hypergraph_network
+from utils import save_model, load_model, save_embeddings
 
 from IPython import embed
 
@@ -41,25 +42,33 @@ if opt.options is not None:
     opt = load_config(opt.options)
 if opt.seed is not None:
     np.random.seed(opt.seed)
+
+# dataset
 dataset = read_datasets(opt.data_path)
 print(dataset)
 train_provider = HNDataProvider(dataset.train, dataset.embeddings, batch_size=opt.batch_size, num_neg_samples=opt.num_neg_samples)
 test_provider = HNDataProvider(dataset.test, dataset.embeddings, batch_size=opt.batch_size, num_neg_samples=opt.num_neg_samples)
 
+# net
 opt.dim_feature = [sum(dataset.train.nums_type)-n for n in dataset.train.nums_type]
 net = hypergraph_network(opt)
+# # if need to load model
+# load_model(net, opt)
 
+# optimizer
 optimizer = torch.optim.RMSprop(net.parameters(), lr=opt.learning_rate)
 
+# loss
 BCE_loss = nn.BCELoss()
 def sparse_autoencoder_error(y_pred, y_true):
     return ((torch.sign(y_true)*(y_true-y_pred))**2).mean()
 MSE = nn.MSELoss()
 
+
 def Mean(result_list):
     return np.array([r.data.numpy() for r in result_list]).mean()
 
-
+# process
 begin_time = time.time()
 for epoch in range(opt.epochs_to_train):
     print("\nepoch:", epoch)
@@ -71,8 +80,6 @@ for epoch in range(opt.epochs_to_train):
         batch = train_provider.next()
         if batch == None:
             break
-
-        optimizer.zero_grad()
 
         x, target, label = batch['embedding'], batch['embedding'], batch['label']
         (decoded, predict) = net(x)
@@ -89,6 +96,7 @@ for epoch in range(opt.epochs_to_train):
         mse[2].append(MSE(decoded[2], target[2]))
         acc.append((predict > 0.5) == label.byte())
 
+        optimizer.zero_grad()
         loss[it].backward()
         optimizer.step()
         it += 1 
@@ -97,15 +105,14 @@ for epoch in range(opt.epochs_to_train):
     print("     mean_square_error: decode_0: %4f, decode_1: %4f, decode_2: %4f"
          % (Mean(mse[0]), Mean(mse[1]), Mean(mse[2])))
     print("     classify_accuracy: %.4f" % Mean(acc))
-
-
+ 
     # test
     net.eval()
     it = 0
     val_loss, val_dec_loss, val_cla_loss = [], [[], [], []], []
     val_mse, val_acc = [[], [], []], []
     while 1:
-        batch = train_provider.next()
+        batch = test_provider.next()
         if batch == None:
             break
 
@@ -132,6 +139,10 @@ for epoch in range(opt.epochs_to_train):
          % (Mean(val_mse[0]), Mean(val_mse[1]), Mean(val_mse[2])))
     print("       val_classify_accuracy: %.4f" % Mean(val_acc))
     
+
+# save model & embeddings
+save_model(net, opt)
+save_embeddings(net, dataset, opt)
 
 end_time = time.time()
 print("time: ", end_time - begin_time)

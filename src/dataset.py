@@ -17,7 +17,6 @@ from IPython import embed
 Datasets = collections.namedtuple('Datasets', ['train', 'test', 'embeddings', 'node_cluster',
                                                 'labels', 'idx_label', 'label_name'])
 
-# TODO:
 class HNDataset(Data.Dataset):
     def __init__(self, edge, nums_type):
         self.edge = edge
@@ -34,8 +33,9 @@ class HNDataset(Data.Dataset):
         return self.nums_examples
 
 
+
+# FIXME: test also be shuffled??
 class HNDataProvider:
-    # TODO: sparse input
     def __init__(self, dataset, embeddings, batch_size=16, shuffle=True, drop_last=True, num_neg_samples=1, pair_radio=0.9, sparse_input=True):
         self.dataset = dataset
         self.embeddings = embeddings
@@ -144,7 +144,7 @@ def generate_H(edge, nums_type):
     H = [csr_matrix((np.ones(nums_examples), (edge[:, i], range(nums_examples))), shape=(nums_type[i], nums_examples)) for i in range(3)]
     return H
 
-# TODO: where??
+# FIXME: where to use??
 def dense_to_onehot(labels):
     return np.array(map(lambda x: [x*0.5+0.5, x*-0.5+0.5], list(labels)), dtype=float)
 
