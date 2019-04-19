@@ -16,7 +16,7 @@ def get_embeddings(net, dataset, opt):
             ps.append(embed.data.numpy())
         ps = np.vstack(ps)
         embeddings.append(ps)
-    print(embeddings)
+    # print(embeddings)
     return embeddings
 
 def save_embeddings(net, dataset, opt, file_name='embeddings.npy'):
@@ -50,4 +50,3 @@ def load_model(net, opt):
     prefix_path = os.path.join(opt.save_path, '{}_{}'.format(opt.prefix_path, opt.embedding_size[0]))
     net.load_state_dict(torch.load(os.path.join(prefix_path, 'model_params.pkl')))
     # self.model = load_model(, custom_objects={'sparse_autoencoder_error': self.sparse_autoencoder_error})
-    pass
