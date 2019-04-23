@@ -107,32 +107,33 @@ for epoch in range(opt.epochs_to_train):
     print("     classify_accuracy: %.4f" % Mean(acc))
  
     # test
-    net.eval()
-    it = 0
-    val_loss, val_dec_loss, val_cla_loss = [], [[], [], []], []
-    val_mse, val_acc = [[], [], []], []
-    while 1:
-        batch = test_provider.next()
-        if batch == None:
-            break
+    with torch.no_grad():
+        net.eval()
+        it = 0
+        val_loss, val_dec_loss, val_cla_loss = [], [[], [], []], []
+        val_mse, val_acc = [[], [], []], []
+        while 1:
+            batch = test_provider.next()
+            if batch == None:
+                break
 
-        x, target, label = batch['embedding'], batch['embedding'], batch['label']
-        (decoded, predict) = net(x)
-        
-        # loss
-        val_dec_loss[0].append(sparse_autoencoder_error(decoded[0], target[0]))
-        val_dec_loss[1].append(sparse_autoencoder_error(decoded[1], target[1]))
-        val_dec_loss[2].append(sparse_autoencoder_error(decoded[2], target[2]))
-        val_cla_loss.append(BCE_loss(predict, label))
-        val_loss.append(sum([val_dec_loss[i][it] for i in range(3)]) * opt.alpha + val_cla_loss[it])
-        # metrics
-        val_mse[0].append(MSE(decoded[0], target[0]))
-        val_mse[1].append(MSE(decoded[1], target[1]))
-        val_mse[2].append(MSE(decoded[2], target[2]))
-        val_acc.append((predict > 0.5) == label.byte())
-        it += 1
+            x, target, label = batch['embedding'], batch['embedding'], batch['label']
+            (decoded, predict) = net(x)
+            
+            # loss
+            val_dec_loss[0].append(sparse_autoencoder_error(decoded[0], target[0]))
+            val_dec_loss[1].append(sparse_autoencoder_error(decoded[1], target[1]))
+            val_dec_loss[2].append(sparse_autoencoder_error(decoded[2], target[2]))
+            val_cla_loss.append(BCE_loss(predict, label))
+            val_loss.append(sum([val_dec_loss[i][it] for i in range(3)]) * opt.alpha + val_cla_loss[it])
+            # metrics
+            val_mse[0].append(MSE(decoded[0], target[0]))
+            val_mse[1].append(MSE(decoded[1], target[1]))
+            val_mse[2].append(MSE(decoded[2], target[2]))
+            val_acc.append((predict > 0.5) == label.byte())
+            it += 1
 
-    net.train()
+        net.train()
     print("   validation: \n       val_loss: %4f, decode_0: %4f, decode_1: %4f, decode_2: %4f, classify_loss: %4f"
          % (Mean(val_loss), Mean(val_dec_loss[0]),Mean(val_dec_loss[1]), Mean(val_dec_loss[2]), Mean(val_cla_loss)))
     print("       val_mean_square_error: decode_0: %4f, decode_1: %4f, decode_2: %4f"
